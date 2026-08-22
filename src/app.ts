@@ -1,11 +1,13 @@
 import "dotenv/config";
 import express from "express";
 import chatRoute from "./routes/chat.route";
+import usageRoute from "./routes/usage.route";
 import { connectToDatabase } from "./config/database";
 
 const app = express();
 app.use(express.json());
 app.use("/v1/chat", chatRoute);
+app.use("/v1/usage", usageRoute);
 
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
 
