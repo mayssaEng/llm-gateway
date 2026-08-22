@@ -5,7 +5,7 @@ export interface AuthenticatedRequest extends Request {
   apiKeyOwner?: string;
 }
 
-export function authenticateApiKey(
+export async function authenticateApiKey(
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
@@ -17,12 +17,17 @@ export function authenticateApiKey(
   }
 
   const key = authHeader.replace("Bearer ", "");
-  const record = findApiKey(key);
 
-  if (!record) {
-    return res.status(401).json({ error: "Invalid API key" });
+  try {
+    const record = await findApiKey(key);
+
+    if (!record) {
+      return res.status(401).json({ error: "Invalid API key" });
+    }
+
+    req.apiKeyOwner = record.owner;
+    next();
+  } catch (err: any) {
+    res.status(500).json({ error: "Authentication error: " + err.message });
   }
-
-  req.apiKeyOwner = record.owner;
-  next();
 }
