@@ -3,6 +3,7 @@ import { selectProvider, getFallbackProvider, FALLBACK_MODEL } from "../services
 import { authenticateApiKey, AuthenticatedRequest } from "../middlewares/auth.middleware";
 import { rateLimit } from "../middlewares/rateLimit.middleware";
 import { logUsage } from "../services/usageLogger";
+import { getCachedResponse, setCachedResponse } from "../services/cache";
 
 const router = Router();
 
@@ -12,8 +13,16 @@ router.post(
   rateLimit,
   async (req: AuthenticatedRequest, res: Response) => {
     const requestedModel = req.body.model;
-    const primaryProvider = selectProvider(requestedModel);
+    const messages = req.body.messages;
     const apiKey = req.headers["authorization"]!.replace("Bearer ", "");
+
+    // Vérifie le cache avant tout appel provider
+    const cached = getCachedResponse(requestedModel, messages);
+    if (cached) {
+      return res.json({ ...cached, requestedBy: req.apiKeyOwner, cached: true });
+    }
+
+    const primaryProvider = selectProvider(requestedModel);
 
     try {
       const result = await primaryProvider.complete(req.body);
@@ -27,7 +36,10 @@ router.post(
         fallback: false,
       });
 
-      return res.json({ ...result, requestedBy: req.apiKeyOwner, fallback: false, cost });
+      const responseBody = { ...result, fallback: false, cost };
+      setCachedResponse(requestedModel, messages, responseBody);
+
+      return res.json({ ...responseBody, requestedBy: req.apiKeyOwner, cached: false });
     } catch (primaryError: any) {
       console.error(`[WARN] Provider "${primaryProvider.name}" failed: ${primaryError.message}`);
 
@@ -52,14 +64,16 @@ router.post(
           fallback: true,
         });
 
-        return res.json({
+        const responseBody = {
           ...fallbackResult,
-          requestedBy: req.apiKeyOwner,
           fallback: true,
           originalProvider: primaryProvider.name,
           originalError: primaryError.message,
           cost,
-        });
+        };
+        setCachedResponse(requestedModel, messages, responseBody);
+
+        return res.json({ ...responseBody, requestedBy: req.apiKeyOwner, cached: false });
       } catch (fallbackError: any) {
         return res.status(500).json({
           error: "Both primary and fallback providers failed",
