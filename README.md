@@ -5,8 +5,13 @@ A production-style backend gateway that routes chat completion requests across m
 ## Why this project
 
 Companies running multiple internal apps that each call LLM providers directly face real problems: untracked costs across teams, no resilience when a provider goes down, and API keys scattered across codebases. This Gateway centralizes all of that behind a single, secure entry point.
-
 ## Architecture
+
+Client -> Auth Middleware -> Rate Limiter -> Cache Check -> Provider Router -> LLM Provider
+                                                                  (on failure)
+                                                             Fallback Provider
+                                                                  |
+                                                          Usage Logger (MongoDB)
 
 ## Features
 
