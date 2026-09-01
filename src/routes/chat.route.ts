@@ -2,7 +2,7 @@ import { Router, Response } from "express";
 import { selectProvider, getFallbackProvider, FALLBACK_MODEL } from "../services/providerRouter";
 import { authenticateApiKey, AuthenticatedRequest } from "../middlewares/auth.middleware";
 import { rateLimit } from "../middlewares/rateLimit.middleware";
-import { logUsage } from "../services/usageLogger";
+import { logUsage, logFailure } from "../services/usageLogger";
 import { getCachedResponse, setCachedResponse } from "../services/cache";
 
 const router = Router();
@@ -23,9 +23,11 @@ router.post(
     }
 
     const primaryProvider = selectProvider(requestedModel);
+    const primaryStart = Date.now();
 
     try {
       const result = await primaryProvider.complete(req.body);
+      const latencyMs = Date.now() - primaryStart;
 
       const cost = await logUsage({
         apiKey,
@@ -34,6 +36,7 @@ router.post(
         inputTokens: result.inputTokens,
         outputTokens: result.outputTokens,
         fallback: false,
+        latencyMs,
       });
 
       const responseBody = { ...result, fallback: false, cost };
@@ -41,7 +44,17 @@ router.post(
 
       return res.json({ ...responseBody, requestedBy: req.apiKeyOwner, cached: false });
     } catch (primaryError: any) {
+      const primaryLatencyMs = Date.now() - primaryStart;
       console.error(`[WARN] Provider "${primaryProvider.name}" failed: ${primaryError.message}`);
+
+      await logFailure({
+        apiKey,
+        provider: primaryProvider.name,
+        model: requestedModel,
+        fallback: false,
+        latencyMs: primaryLatencyMs,
+        errorMessage: primaryError.message,
+      });
 
       const fallbackProvider = getFallbackProvider();
 
@@ -49,11 +62,14 @@ router.post(
         return res.status(500).json({ error: primaryError.message });
       }
 
+      const fallbackStart = Date.now();
+
       try {
         const fallbackResult = await fallbackProvider.complete({
           ...req.body,
           model: FALLBACK_MODEL,
         });
+        const fallbackLatencyMs = Date.now() - fallbackStart;
 
         const cost = await logUsage({
           apiKey,
@@ -62,6 +78,7 @@ router.post(
           inputTokens: fallbackResult.inputTokens,
           outputTokens: fallbackResult.outputTokens,
           fallback: true,
+          latencyMs: fallbackLatencyMs,
         });
 
         const responseBody = {
@@ -75,6 +92,17 @@ router.post(
 
         return res.json({ ...responseBody, requestedBy: req.apiKeyOwner, cached: false });
       } catch (fallbackError: any) {
+        const fallbackLatencyMs = Date.now() - fallbackStart;
+
+        await logFailure({
+          apiKey,
+          provider: fallbackProvider.name,
+          model: FALLBACK_MODEL,
+          fallback: true,
+          latencyMs: fallbackLatencyMs,
+          errorMessage: fallbackError.message,
+        });
+
         return res.status(500).json({
           error: "Both primary and fallback providers failed",
           primaryError: primaryError.message,

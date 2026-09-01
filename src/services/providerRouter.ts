@@ -27,3 +27,6 @@ export const FALLBACK_MODEL = "openai/gpt-oss-20b";
 export function getFallbackProvider(): LLMProvider {
   return groqProvider;
 }
+
+// Utilisé par la route /v1/health pour vérifier l'état de tous les providers d'un coup.
+export const allProviders: LLMProvider[] = [openaiProvider, ollamaProvider, groqProvider];

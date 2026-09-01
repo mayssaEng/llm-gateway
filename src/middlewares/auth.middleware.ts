@@ -3,6 +3,7 @@ import { findApiKey } from "../config/apiKeys";
 
 export interface AuthenticatedRequest extends Request {
   apiKeyOwner?: string;
+  isAdmin?: boolean;
 }
 
 export async function authenticateApiKey(
@@ -26,6 +27,7 @@ export async function authenticateApiKey(
     }
 
     req.apiKeyOwner = record.owner;
+    req.isAdmin = record.isAdmin ?? false;
     next();
   } catch (err: any) {
     res.status(500).json({ error: "Authentication error: " + err.message });

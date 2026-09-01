@@ -14,14 +14,17 @@ export async function connectToDatabase(): Promise<Db> {
   await client.connect();
 
   db = client.db("llm-gateway");
-  console.log("Connected to MongoDB Atlas");
 
   return db;
 }
 
 export function getDb(): Db {
   if (!db) {
-    throw new Error("Database not initialized. Call connectToDatabase() first.");
+    throw new Error("Database not initialized or unavailable. Check MongoDB Atlas connectivity.");
   }
   return db;
+}
+
+export function isDatabaseConnected(): boolean {
+  return !!db;
 }

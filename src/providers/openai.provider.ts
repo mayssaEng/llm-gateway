@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { LLMProvider, CompletionRequest, CompletionResponse } from "../types/llm";
+import { LLMProvider, CompletionRequest, CompletionResponse, ProviderHealth } from "../types/llm";
 
 export class OpenAIProvider implements LLMProvider {
   name = "openai";
@@ -23,5 +23,15 @@ export class OpenAIProvider implements LLMProvider {
       inputTokens: response.usage?.prompt_tokens ?? 0,
       outputTokens: response.usage?.completion_tokens ?? 0,
     };
+  }
+
+  async healthCheck(): Promise<ProviderHealth> {
+    const start = Date.now();
+    try {
+      await this.client.models.list();
+      return { provider: this.name, status: "up", latencyMs: Date.now() - start };
+    } catch (err: any) {
+      return { provider: this.name, status: "down", latencyMs: Date.now() - start, error: err.message };
+    }
   }
 }

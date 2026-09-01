@@ -17,7 +17,15 @@ export interface CompletionResponse {
   outputTokens: number;
 }
 
+export interface ProviderHealth {
+  provider: string;
+  status: "up" | "down";
+  latencyMs: number;
+  error?: string;
+}
+
 export interface LLMProvider {
   name: string;
   complete(req: CompletionRequest): Promise<CompletionResponse>;
+  healthCheck(): Promise<ProviderHealth>;
 }
