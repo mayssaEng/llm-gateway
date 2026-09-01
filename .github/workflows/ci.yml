@@ -29,7 +29,6 @@ jobs:
       - name: Lancer les tests
         run: npm test
         env:
-        env:
           OPENAI_API_KEY: dummy-key-for-ci
           GROQ_API_KEY: dummy-key-for-ci
           MONGODB_URI: mongodb://localhost:27017/test
