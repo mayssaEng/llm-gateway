@@ -1,4 +1,4 @@
-﻿import "dotenv/config";
+import "dotenv/config";
 import { connectToDatabase } from "../config/database";
 
 async function seed() {
@@ -8,8 +8,20 @@ async function seed() {
   await collection.deleteMany({});
 
   await collection.insertMany([
-    { key: "sk-gateway-support-001", owner: "chatbot-support", active: true },
-    { key: "sk-gateway-marketing-001", owner: "marketing-tool", active: true },
+    {
+      key: "sk-gateway-support-001",
+      owner: "chatbot-support",
+      active: true,
+      isAdmin: true,
+      createdAt: new Date(),
+    },
+    {
+      key: "sk-gateway-marketing-001",
+      owner: "marketing-tool",
+      active: true,
+      isAdmin: false,
+      createdAt: new Date(),
+    },
   ]);
 
   console.log("API keys seeded successfully");

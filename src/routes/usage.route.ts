@@ -2,6 +2,7 @@
 import { authenticateApiKey, AuthenticatedRequest } from "../middlewares/auth.middleware";
 import { getUsageSummary } from "../services/usageSummary";
 import { getTimeSeries, getProviderStats } from "../services/usageAnalytics";
+import { getBudgetSnapshot } from "../services/budgetService";
 
 const router = Router();
 
@@ -33,6 +34,17 @@ router.get("/by-provider", authenticateApiKey, async (req: AuthenticatedRequest,
     const apiKey = req.headers["authorization"]!.replace("Bearer ", "");
     const stats = await getProviderStats(apiKey);
     res.json(stats);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /v1/usage/budget -> statut budgétaire du mois en cours pour la clé appelante
+router.get("/budget", authenticateApiKey, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const apiKey = req.headers["authorization"]!.replace("Bearer ", "");
+    const snapshot = await getBudgetSnapshot(apiKey);
+    res.json(snapshot);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

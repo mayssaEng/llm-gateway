@@ -2,6 +2,7 @@ import { Router, Response } from "express";
 import { selectProvider, getFallbackProvider, FALLBACK_MODEL } from "../services/providerRouter";
 import { authenticateApiKey, AuthenticatedRequest } from "../middlewares/auth.middleware";
 import { rateLimit } from "../middlewares/rateLimit.middleware";
+import { budgetGuard } from "../middlewares/budgetGuard.middleware";
 import { logUsage, logFailure } from "../services/usageLogger";
 import { getCachedResponse, setCachedResponse } from "../services/cache";
 
@@ -11,6 +12,7 @@ router.post(
   "/completions",
   authenticateApiKey,
   rateLimit,
+  budgetGuard,
   async (req: AuthenticatedRequest, res: Response) => {
     const requestedModel = req.body.model;
     const messages = req.body.messages;
